@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Application Maintenance Dashboard</title>
+
+<style>
+body{
+    font-family:'Segoe UI',sans-serif;
+    background:#f4f7fc;
+    margin:0;
+    padding:0;
+}
+
+/* Header */
+header{
+    background:linear-gradient(135deg,#0f172a,#2563eb);
+    color:white;
+    text-align:center;
+    padding:30px;
+}
+
+header h1{
+    margin:0;
+}
+
+header p{
+    color:#dbeafe;
+    margin-top:10px;
+}
+
+/* Dashboard Cards */
+.stats-container{
+    display:flex;
+    justify-content:center;
+    gap:25px;
+    margin:30px auto;
+    flex-wrap:wrap;
+}
+
+.card{
+    background:white;
+    width:220px;
+    padding:20px;
+    text-align:center;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+
+.card h2{
+    margin:0;
+    color:#2563eb;
+}
+
+.open-card{
+    border-left:5px solid orange;
+}
+
+.done-card{
+    border-left:5px solid green;
+}
+
+/* Form Container */
+.container{
+    width:80%;
+    max-width:700px;
+    margin:auto;
+    background:white;
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}
+
+.container h2{
+    text-align:center;
+    margin-bottom:10px;
+}
+
+.subtitle{
+    text-align:center;
+    color:#777;
+    margin-bottom:20px;
+}
+
+label{
+    display:block;
+    margin-top:15px;
+    font-weight:bold;
+}
+
+input,
+textarea,
+select{
+    width:100%;
+    padding:12px;
+    margin-top:5px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    box-sizing:border-box;
+}
+
+textarea{
+    resize:vertical;
+}
+
+button{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:12px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    margin-top:20px;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+/* Issues Header */
+.issues-header{
+    width:95%;
+    margin:30px auto 10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+}
+
+#searchIssue{
+    width:250px;
+}
+
+/* Table */
+table{
+    width:95%;
+    margin:0 auto 30px;
+    border-collapse:collapse;
+    background:white;
+    box-shadow:0 5px 15px rgba(0,0,0,0.1);
+    overflow:hidden;
+}
+
+th{
+    background:#2563eb;
+    color:white;
+}
+
+th,td{
+    padding:12px;
+    border:1px solid #ddd;
+    text-align:left;
+}
+
+tr:nth-child(even){
+    background:#f8fafc;
+}
+
+tr:hover{
+    background:#e0f2fe;
+}
+
+.delete-btn{
+    background:#dc2626;
+    padding:8px 12px;
+}
+
+.delete-btn:hover{
+    background:#b91c1c;
+}
+
+.status{
+    color:white;
+    padding:5px 10px;
+    border-radius:15px;
+    font-size:13px;
+}
+
+.open{
+    background:orange;
+}
+
+.progress{
+    background:blue;
+}
+
+.test{
+    background:purple;
+}
+
+.done{
+    background:green;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🤖 AI Application Maintenance Dashboard</h1>
+    <p>Raise, Track and Resolve Issues Efficiently</p>
+</header>
+
+<!-- Dashboard Cards -->
+<div class="stats-container">
+
+    <div class="card">
+        <h2 id="totalIssues">0</h2>
+        <p>Total Issues</p>
+    </div>
+
+    <div class="card open-card">
+        <h2 id="openIssues">0</h2>
+        <p>Open Issues</p>
+    </div>
+
+    <div class="card done-card">
+        <h2 id="doneIssues">0</h2>
+        <p>Resolved</p>
+    </div>
+
+</div>
+
+<!-- Form -->
+<div class="container">
+
+    <h2>Raise New Issue</h2>
+
+    <p class="subtitle">
+        Raise and Track Bugs / Enhancement Requests
+    </p>
+
+    <label>Issue Title</label>
+    <input type="text" id="issueTitle">
+
+    <label>Description</label>
+    <textarea id="description" rows="4"></textarea>
+
+    <label>Status</label>
+    <select id="status">
+        <option>Open</option>
+        <option>In Progress</option>
+        <option>In Test</option>
+        <option>Done</option>
+    </select>
+
+    <button onclick="submitIssue()">Submit Issue</button>
+
+</div>
+
+<!-- Search -->
+<div class="issues-header">
+    <h2>Issues List</h2>
+
+    <input
+        type="text"
+        id="searchIssue"
+        placeholder="🔍 Search Issues"
+        onkeyup="searchIssue()">
+</div>
+
+<!-- Table -->
+<table id="issueTable">
+
+<thead>
+<tr>
+    <th>ID</th>
+    <th>Issue Title</th>
+    <th>Description</th>
+    <th>Status</th>
+    <th>Created On</th>
+    <th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+</tbody>
+
+</table>
+
+<script>
+
+let issueCounter = 1;
+let totalIssues = 0;
+let openIssues = 0;
+let doneIssues = 0;
+
+function submitIssue(){
+
+    let title = document.getElementById("issueTitle").value.trim();
+    let description = document.getElementById("description").value.trim();
+    let status = document.getElementById("status").value;
+
+    if(title === "" || description === ""){
+        alert("Please fill all fields");
+        return;
+    }
+
+    let tableBody = document.querySelector("#issueTable tbody");
+    let row = tableBody.insertRow();
+
+    let currentDate = new Date().toLocaleString();
+
+    row.insertCell(0).innerText = issueCounter++;
+    row.insertCell(1).innerText = title;
+    row.insertCell(2).innerText = description;
+
+    let statusCell = row.insertCell(3);
+
+    if(status === "Open"){
+        statusCell.innerHTML =
+        "<span class='status open'>Open</span>";
+        openIssues++;
+    }
+    else if(status === "In Progress"){
+        statusCell.innerHTML =
+        "<span class='status progress'>In Progress</span>";
+    }
+    else if(status === "In Test"){
+        statusCell.innerHTML =
+        "<span class='status test'>In Test</span>";
+    }
+    else{
+        statusCell.innerHTML =
+        "<span class='status done'>Done</span>";
+        doneIssues++;
+    }
+
+    row.insertCell(4).innerText = currentDate;
+
+    let actionCell = row.insertCell(5);
+
+    actionCell.innerHTML =
+    "<button class='delete-btn' onclick='deleteIssue(this)'>Delete</button>";
+
+    totalIssues++;
+
+    updateCounters();
+
+    document.getElementById("issueTitle").value = "";
+    document.getElementById("description").value = "";
+    document.getElementById("status").value = "Open";
+
+    alert("Issue Submitted Successfully!");
+}
+
+function deleteIssue(button){
+
+    let row = button.parentElement.parentElement;
+
+    let statusText =
+    row.cells[3].innerText.trim();
+
+    if(statusText === "Open"){
+        openIssues--;
+    }
+
+    if(statusText === "Done"){
+        doneIssues--;
+    }
+
+    totalIssues--;
+
+    row.remove();
+
+    updateCounters();
+}
+
+function updateCounters(){
+
+    document.getElementById("totalIssues").innerText = totalIssues;
+    document.getElementById("openIssues").innerText = openIssues;
+    document.getElementById("doneIssues").innerText = doneIssues;
+}
+
+function searchIssue(){
+
+    let input =
+    document.getElementById("searchIssue")
+    .value.toUpperCase();
+
+    let rows =
+    document.querySelectorAll("#issueTable tbody tr");
+
+    rows.forEach(row => {
+
+        let title =
+        row.cells[1].innerText.toUpperCase();
+
+        if(title.includes(input)){
+            row.style.display = "";
+        }
+        else{
+            row.style.display = "none";
+        }
+    });
+}
+
+</script>
+
+</body>
+</html>
