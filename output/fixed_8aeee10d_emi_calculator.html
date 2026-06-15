@@ -51,16 +51,26 @@
     button {
       width: 100%;
       padding: 12px;
-      background-color: #3498db;
+      background-color: #964B00;
       color: white;
       border: none;
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
     }
 
     button:hover {
-      background-color: #2980b9;
+      background-color: #786C3B;
+    }
+
+    .dashboard-btn {
+      margin-top: 10px;
+      background-color: #786C3B;
+    }
+
+    .dashboard-btn:hover {
+      background-color: #786C3B;
     }
 
     .result {
@@ -101,6 +111,7 @@
     <input type="number" id="duration" placeholder="e.g. 240">
 
     <button onclick="calculateEMI()">Calculate EMI</button>
+    <button onclick="location.href='/dashboard'" class="dashboard-btn">Maintenance Dashboard</button>
 
     <div class="result" id="resultBox">
       <label>Your Monthly EMI</label>

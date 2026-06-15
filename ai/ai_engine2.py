@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from dotenv import load_dotenv
-from groq_client import get_client
+from ai.groq_client import get_client
 
 load_dotenv()
 
@@ -430,11 +430,25 @@ def process_issue(
 
     # ── STEP 4: Move original to processed
     try:
-        shutil.move(str(input_path), str(Path(processed_dir) / filename))
-        print(f" Original archived to processed/{filename}")
-    except Exception as e:
-        logging.getLogger('merged_agent').warning(f'Could not archive original: {e}')
+        # Save old version in processed/
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+        processed_filename = f"{timestamp}_{filename}"
+
+        shutil.copy(
+            str(input_path),
+            str(Path(processed_dir) / processed_filename)
+        )
+        print(f"Original archived to processed/{filename}")
+
+        # Update input file with AI-fixed code
+        input_path.write_text(final_code, encoding='utf-8')
+        print(f"Input file updated with latest AI fix.")
+
+    except Exception as e:
+        logging.getLogger('merged_agent').warning(
+            f'Could not update files: {e}'
+        )
     # ── STEP 5: Write success log 
     verified_str = "AUTO-VERIFIED by pytest" if verified else "UNVERIFIED — human review required"
     log = write_log(

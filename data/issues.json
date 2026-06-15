@@ -1,0 +1,50 @@
+[
+    {
+        "id": "6a7ab268",
+        "title": "button color",
+        "description": "change the button color to green",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 04:37:19",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_6a7ab268_emi_calculator.html. BUGS: The bug reported is the button color which is currently set to #3498db. The requirement is to change it to green. | UI/UX: Suggestions include making the calculator more responsive, adding input validation for non-negative numbers, and improving the color scheme for better visibility. Applied changes include changing the button color to green, adding box-sizing to all elements, and improving font sizes for better readability."
+    },
+    {
+        "id": "ce0f73fb",
+        "title": "button color",
+        "description": "i don't like previous green color, change the button color to different green",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 04:38:48",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_ce0f73fb_emi_calculator.html. BUGS: The reported bug is related to the button color. The user wants to change the button color from green to a different shade of green. The original button color is #3498db. Additionally, there are no other bugs in the provided code, but there are a few potential issues. For example, the EMI calculation does not handle cases where the user enters very large numbers, which could cause the calculation to overflow. Also, the input fields do not have any validation, which means users could enter non-numeric values or leave the fields empty. | UI/UX: To improve the UI/UX, we could add input validation to prevent users from entering non-numeric values or leaving the fields empty. We could also add a loading animation to the Calculate EMI button to show the user that the calculation is in progress. Furthermore, we could consider adding more colors to the UI to make it more visually appealing. A different shade of green, like #32CD32, could be used for the buttons. We could also use a more modern font, like Open Sans, to make the text more readable."
+    },
+    {
+        "id": "d463c5c4",
+        "title": "background color",
+        "description": "change background color to light blue",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 04:39:47",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_d463c5c4_emi_calculator.html. BUGS: The reported bug is related to changing the background color to light blue. However, there's no bug in the provided code that hinders its functionality in terms of user interaction. The current background color of the body is #f0f4f8 and needs to be changed to a light blue color. Additionally, the code lacks any form of input validation for non-numeric characters and does not handle cases where the user enters a loan amount, interest rate, or duration of 0 or less. Another issue is the lack of accessibility features for users who rely on screen readers or keyboard navigation. | UI/UX: Suggested improvements include adding input validation to prevent non-numeric characters, adding accessibility features such as ARIA labels and screen reader support, and improving the overall layout to be more responsive and user-friendly on various devices. Additionally, changing the background color to a light blue color as requested."
+    },
+    {
+        "id": "455994b3",
+        "title": "button color",
+        "description": "change buttons color to brown and give it border",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 04:55:50",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_455994b3_emi_calculator.html. BUGS: The reported bug is the color of the buttons, which are currently blue. The bug is not actually an error, but rather a styling issue. The buttons need to be changed to brown and have a border added to them. Other bugs found in the code include the lack of validation for empty input fields and the absence of a dashboard HTML page, which the 'Maintenance Dashboard' button links to. | UI/UX: To improve the UI/UX of the Home Loan EMI Calculator, the following suggestions are made: 1) Add validation for empty input fields to ensure that users enter values for all fields. 2) Use a more user-friendly color scheme, with sufficient contrast between the background and text. 3) Consider adding a reset button to clear the input fields and result. 4) Use a more descriptive label for the 'Maintenance Dashboard' button, as its purpose is unclear."
+    },
+    {
+        "id": "033414b7",
+        "title": "button looking bad",
+        "description": "give border to button",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 04:58:50",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_033414b7_emi_calculator.html. BUGS: The bug reported is that the button is looking bad, which can be improved by adding a border to the button. Additionally, there are no validation checks for non-positive numbers and very large numbers, and no handling for potential calculation errors in the calculateEMI() function. | UI/UX: Some UI/UX improvements can be made, such as adding borders to the buttons, changing colors to be more accessible, and improving the layout of the calculator to make it more intuitive to users. Also, the Maintenance Dashboard button can be placed at the bottom or top of the page for better user experience."
+    },
+    {
+        "id": "7d4a57e2",
+        "title": "button hover",
+        "description": "exchange the button color and text while hovering over it",
+        "status": "Resolved",
+        "createdOn": "16-06-2026 05:07:08",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_7d4a57e2_emi_calculator.html. BUGS: The reported bug is to exchange the button color and text while hovering over it. This is not currently implemented for all buttons in the code. Additionally, other bugs found include the lack of input validation for negative numbers and non-numeric input, potential issues with the calculateEMI function not handling very large or very small input values, and the lack of accessibility features such as ARIA labels for the inputs and buttons. | UI/UX: To improve the UI/UX, it would be beneficial to add input validation for all fields to ensure that users enter valid numbers. Additionally, adding ARIA labels to the inputs and buttons can improve accessibility. Using a more modern and responsive design can also improve the overall user experience. Furthermore, adding hover effects to all buttons and implementing the requested hover effect can enhance the interaction with the application."
+    }
+]
