@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-15 23:37:17 UTC
+ISSUE ID    : 7d4a57e2
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : button hover
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_7d4a57e2_emi_calculator.html. BUGS: The reported bug is to exchange the button color and text while hovering over it. This is not currently implemented for all buttons in the code. Additionally, other bugs found include the lack of input validation for negative numbers and non-numeric input, potential issues with the calculateEMI function not handling very large or very small input values, and the lack of accessibility features such as ARIA labels for the inputs and buttons. | UI/UX: To improve the UI/UX, it would be beneficial to add input validation for all fields to ensure that users enter valid numbers. Additionally, adding ARIA labels to the inputs and buttons can improve accessibility. Using a more modern and responsive design can also improve the overall user experience. Furthermore, adding hover effects to all buttons and implementing the requested hover effect can enhance the interaction with the application.
+============================================================

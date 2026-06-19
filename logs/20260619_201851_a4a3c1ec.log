@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-19 20:18:51 UTC
+ISSUE ID    : a4a3c1ec
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : Division by Zero Error
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_a4a3c1ec_emi_calculator.html. BUGS: The division by zero error occurs when the interest rate is 0 because it attempts to calculate Math.pow(1 + R, N) with R being 0. Additionally, the code does not validate if the duration is a multiple of 12. It also does not handle cases where the interest rate is 0 or very close to 0, which could result in NaN (Not a Number) or an extremely large number. | UI/UX: To improve the UI/UX, the input fields could be labeled with placeholders and have a clearer distinction between the input section and the result section. Error messages could be displayed in a more user-friendly way, and the 'Calculate EMI' button could be disabled until all fields are filled in. The result box could also display a loading message while the calculation is being performed.
+============================================================

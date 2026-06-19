@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-19 20:16:17 UTC
+ISSUE ID    : eccc0510
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : No accessibility features
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_eccc0510_emi_calculator.html. BUGS: The reported bug is the lack of accessibility features in the given HTML code. This includes the absence of ARIA attributes and semantic HTML, which makes the calculator inaccessible to users with disabilities. Additionally, the oninput event in the input fields does not handle decimal points correctly, and the alert box does not provide a good user experience for error handling. The code also uses inline styles and JavaScript, which is not recommended for maintainability and scalability. | UI/UX: To improve the UI/UX of the calculator, we can add ARIA attributes to the input fields and buttons to make them accessible to screen readers. We can also use semantic HTML to provide a clear structure to the calculator. The error handling can be improved by displaying error messages below the input fields instead of using alert boxes. The input fields can be validated to handle decimal points correctly. The UI can be improved by using a more modern and responsive design.
+============================================================

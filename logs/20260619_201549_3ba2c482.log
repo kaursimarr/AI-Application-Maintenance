@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-19 20:15:49 UTC
+ISSUE ID    : 3ba2c482
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : No validation for non-numeric input values
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_3ba2c482_emi_calculator.html. BUGS: The code does not prevent non-numeric characters from being entered into the input fields. Even though the input fields are of type 'number', some browsers still allow non-numeric characters. The issue can be fixed by using a JavaScript function to restrict input to only numbers. Another bug exists where the interest rate and duration fields do not have any checks to ensure that the values entered are positive and greater than zero. | UI/UX: To improve the UI/UX, we can add placeholders for the input fields, display error messages when a field is empty or contains invalid data, and make the 'Calculate EMI' button more prominent. Additionally, we can use a more user-friendly way to display the result, such as using a card or a panel.
+============================================================

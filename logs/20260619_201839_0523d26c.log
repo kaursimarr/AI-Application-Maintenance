@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-19 20:18:39 UTC
+ISSUE ID    : 0523d26c
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : Uncaught TypeError
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_0523d26c_emi_calculator.html. BUGS: The reported bug is an Uncaught TypeError which occurs when a user clicks on the 'Maintenance Dashboard' button. The button navigates to '/dashboard' which may not exist, resulting in a 404 error. The actual error is due to the page trying to load a non-existent URL. Another bug in the code is that it does not validate the input fields to prevent non-numeric characters from being entered. If the user enters non-numeric characters in the input fields, the 'Calculate EMI' button click event will throw a JavaScript error. | UI/UX: UI/UX improvements include: 1) Adding validation for input fields to prevent non-numeric characters from being entered, and showing an error message in case of invalid input. 2) Showing a waiting message or a loading animation while the EMI calculation is being performed. 3) Adding input fields for other relevant data such as loan processing fee. 4) Adding a 'Clear' button to reset the input fields. 5) Adding a link or button to go back to the previous page.
+============================================================

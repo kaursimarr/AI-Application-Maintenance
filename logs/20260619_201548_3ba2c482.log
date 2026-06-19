@@ -1,0 +1,8 @@
+============================================================
+TIMESTAMP   : 2026-06-19 20:15:48 UTC
+ISSUE ID    : 3ba2c482
+FILE NAME   : emi_calculator.html
+ISSUE TITLE : No validation for non-numeric input values
+STATUS      : SUCCESS
+MESSAGE     : [UNVERIFIED — human review required] Fix saved to output/fixed_3ba2c482_emi_calculator.html. BUGS: The current code only checks if the input values are NaN, but it does not prevent non-numeric characters from being entered into the input fields. This can be fixed by using a pattern attribute on the input fields to only allow numeric characters and a decimal point. Additionally, the code does not handle cases where the user enters a negative number or zero for loan amount, interest rate, or duration. | UI/UX: To improve UI/UX, we can add input validation to display error messages to the user, add tooltips to the input fields to provide more information, and use a more user-friendly design for the calculator. We can also add a loading animation while the EMI is being calculated to improve the user experience.
+============================================================

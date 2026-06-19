@@ -1,0 +1,74 @@
+[
+    {
+        "id": "1145c32c",
+        "title": "button color is wrong",
+        "description": "change calculate emi button to pink",
+        "status": "Resolved",
+        "source": "Manual",
+        "createdOn": "20-06-2026 01:48:18",
+        "ai_remark": "[UNVERIFIED \u2014 human review required] Fix saved to output/fixed_1145c32c_emi_calculator.html. BUGS: The reported bug is that the 'Calculate EMI' button color is wrong and needs to be changed to pink. The current code sets the background color of all buttons to #3498db. Additionally, the script does not handle cases where the user enters negative numbers or zero for loan amount, interest rate, or duration. | UI/UX: Added a specific class for the 'Calculate EMI' button to change its color to pink. Also, added input validation to handle cases where the user enters negative numbers or zero for loan amount, interest rate, or duration. Changed the font size of the result label and span to improve readability."
+    },
+    {
+        "id": "0523d26c",
+        "title": "Uncaught TypeError",
+        "description": "When a user clicks on the 'Maintenance Dashboard' button, the code tries to navigate to '/dashboard' which may not exist, resulting in a 404 error.",
+        "status": "Resolved",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "a4a3c1ec",
+        "title": "Division by Zero Error",
+        "description": "When the interest rate is 0, the code will throw a division by zero error because it attempts to calculate Math.pow(1 + R, N) with R being 0.",
+        "status": "Resolved",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "01cf7e4e",
+        "title": "EMI Calculation Formula",
+        "description": "The formula used to calculate the EMI is incorrect. The correct formula for calculating EMI is: EMI = (P * R * (1 + R)^N) / ((1 + R)^N - 1) when R and N are monthly values, but in this code R is divided by 12 and 100, so N should be the number of months and R should be the monthly interest rate.",
+        "status": "AI Detected",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "ef53d05c",
+        "title": "Input Validation",
+        "description": "The code checks if the input values are NaN, but it does not check if the values are negative or zero, which could also result in incorrect calculations.",
+        "status": "AI Detected",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "4af873a5",
+        "title": "UI Issue",
+        "description": "When the user clicks on the 'Calculate EMI' button, the result is displayed below the button, but the page does not scroll to the result, so the user may not see the result if the page is not long enough.",
+        "status": "AI Detected",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "ba2cef28",
+        "title": "Potential Overflow Error",
+        "description": "The code uses Math.pow to calculate the power of a number. For large input values, this could result in a number that exceeds the maximum limit of JavaScript numbers, resulting in Infinity or NaN.",
+        "status": "AI Detected",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    },
+    {
+        "id": "5611decd",
+        "title": "Inadequate Error Handling",
+        "description": "The code only checks if the input values are NaN, but it does not handle other potential errors such as overflow errors or division by zero errors.",
+        "status": "AI Detected",
+        "source": "AI",
+        "createdOn": "20-06-2026 01:48:30",
+        "ai_remark": "Detected automatically by Groq"
+    }
+]
