@@ -13,7 +13,6 @@ load_dotenv()
 
 MAX_RETRIES = 3
 
-# Used for .py files — focuses on bug fixing + pytest verification
 SYSTEM_PROMPT_PYTHON = (
     "You are an automated code-repair agent. Fix Python code based on pytest error logs.\n"
     "You MUST respond ONLY with a valid JSON object. No markdown, no extra text.\n"
@@ -24,7 +23,6 @@ SYSTEM_PROMPT_PYTHON = (
     "}"
 )
 
-# Used for .html/.css/.js files — focuses on bugs + UI/UX suggestions
 SYSTEM_PROMPT_WEB = (
     "You are a senior web developer and UI/UX expert with 15+ years of experience.\n"
     "You will be given a web file (HTML/CSS/JS) and an issue description.\n"
@@ -40,11 +38,35 @@ SYSTEM_PROMPT_WEB = (
 
 WEB_EXTENSIONS = {'.html', '.css', '.js'}
 
+# ── Token tracking file ────────────────────────────────────────────────────────
+TOKEN_LOG_FILE = "data/token_usage.json"
 
-# ── Block A: Utilities
+def load_token_log():
+    if not os.path.exists(TOKEN_LOG_FILE):
+        return []
+    with open(TOKEN_LOG_FILE, "r") as f:
+        return json.load(f)
+
+def save_token_entry(issue_id: str, prompt_tokens: int,
+                     completion_tokens: int, total_tokens: int, model: str):
+    """Appends one token usage record to data/token_usage.json."""
+    os.makedirs("data", exist_ok=True)
+    log = load_token_log()
+    log.append({
+        "issue_id":          issue_id,
+        "model":             model,
+        "prompt_tokens":     prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens":      total_tokens,
+        "timestamp":         datetime.now(timezone.utc).strftime("%d-%m-%Y %H:%M:%S UTC")
+    })
+    with open(TOKEN_LOG_FILE, "w") as f:
+        json.dump(log, f, indent=4)
+
+
+# ── Block A: Utilities ─────────────────────────────────────────────────────────
 
 def build_prompt_python(title: str, description: str, source_code: str) -> str:
-    """Builds prompt for Python files — includes issue context and source code."""
     return (
         f"ISSUE TITLE: {title}\n\n"
         f"ISSUE DESCRIPTION:\n{description}\n\n"
@@ -58,13 +80,8 @@ def build_prompt_python(title: str, description: str, source_code: str) -> str:
 
 def build_prompt_web(title: str, description: str, source_code: str,
                      file_ext: str) -> str:
-    """
-    Builds prompt for web files — includes issue + UI/UX analysis request.
-    Phase 2 addition: separate prompt for HTML/CSS/JS files.
-    """
     lang_map = {'.html': 'HTML', '.css': 'CSS', '.js': 'JavaScript'}
     language = lang_map.get(file_ext, 'Web')
-
     return (
         f"ISSUE TITLE: {title}\n\n"
         f"ISSUE DESCRIPTION:\n{description}\n\n"
@@ -82,13 +99,7 @@ def build_prompt_web(title: str, description: str, source_code: str,
 
 def write_log(logs_dir: str, issue_id: str, filename: str, title: str,
               status: str, message: str = '') -> str:
-    """
-    Writes a structured log entry to logs/ and returns the log text.
-    Each log file is timestamped + issue_id so they never overwrite each other.
-    Fixed deprecation warning: using timezone-aware datetime.now(timezone.utc).
-    """
     os.makedirs(logs_dir, exist_ok=True)
-    # Fixed: replaced deprecated utcnow() with timezone-aware now()
     now = datetime.now(timezone.utc)
     timestamp = now.strftime('%Y-%m-%d %H:%M:%S UTC')
     log_lines = [
@@ -114,36 +125,24 @@ def write_log(logs_dir: str, issue_id: str, filename: str, title: str,
 
 
 def get_issue_status(issue_id: str, output_dir: str) -> str:
-    """Checks if a fix already exists for this issue in output/."""
     output_files = list(Path(output_dir).glob(f'fixed_{issue_id}_*'))
     return 'done' if output_files else 'processing'
 
 
-# ── Block B: Testing Safety Net (Python only)
+# ── Block B: Testing Safety Net (Python only) ──────────────────────────────────
 
 def run_tests(test_file="test_calculator.py"):
-    """
-    Runs pytest on the test file and returns (passed_bool, output_logs).
-    Only used for .py files — web files have no automated test runner.
-    """
     print("🔍 Running pytest...")
     result = subprocess.run(
         ["pytest", test_file, "--tb=short", "-q"],
-        capture_output=True,
-        text=True
+        capture_output=True, text=True
     )
     return result.returncode == 0, result.stdout + result.stderr
 
 
 def run_tests_on_fixed_code(fixed_code):
-    """
-    Safely tests fixed Python code without permanently modifying calculator.py.
-    Backup original → swap in fix → run tests → always restore original.
-    Only called for .py files.
-    """
     source_file = "calculator.py"
-    backup_path = f"{Path(source_file).stem}_backup.py"  # calculator_backup.py
-
+    backup_path = f"{Path(source_file).stem}_backup.py"
     shutil.copy(source_file, backup_path)
     try:
         with open(source_file, "w") as f:
@@ -151,16 +150,11 @@ def run_tests_on_fixed_code(fixed_code):
         passed, log_output = run_tests()
         return passed, log_output
     finally:
-        # Always restores original — even if pytest crashes or exception occurs
         shutil.copy(backup_path, source_file)
         os.remove(backup_path)
 
 
 def save_version(code, attempt_number, output_dir, filename):
-    """
-    Saves each AI attempt as a versioned file: calculator_v1.py, v2.py etc.
-    Saved before testing so even failed attempts are preserved for review.
-    """
     os.makedirs(output_dir, exist_ok=True)
     base = Path(filename).stem
     ext  = Path(filename).suffix
@@ -171,46 +165,33 @@ def save_version(code, attempt_number, output_dir, filename):
     return path
 
 
-# ── Block C1: Python Stateful AI Retry Loop (V1 — unchanged)
+# ── Block C1: Python Stateful AI Retry Loop ────────────────────────────────────
 
 def generate_and_test_fix(title, description, source_code,
-                           output_dir, filename, max_retries=MAX_RETRIES):
-    """
-    V1 Core: Stateful Groq retry loop for Python files.
-    - Maintains full conversation history so AI knows what it tried before
-    - Each failed attempt feeds error + previous bad code back to AI
-    - Verifies fix by running pytest
-    - Returns (success_bool, final_code, explanation)
-    """
+                           output_dir, filename, issue_id, max_retries=MAX_RETRIES):
     try:
         client = get_client()
     except ValueError as e:
         print(e)
         return False, source_code, str(e)
 
-    conversation_history = [
-        {"role": "system", "content": SYSTEM_PROMPT_PYTHON}
-    ]
+    MODEL = "llama-3.3-70b-versatile"
+    conversation_history = [{"role": "system", "content": SYSTEM_PROMPT_PYTHON}]
 
-    # Check if code already passes — no point calling AI if tests are green
     passed, log_output = run_tests()
     if passed:
-        print(" Code already passes all tests. Nothing to fix.")
+        print("✅ Code already passes all tests. Nothing to fix.")
         return True, source_code, "Code already passing tests."
 
-    # Initialize outside loop so attempt 2+ can reference previous failed code
     fixed_code = source_code
 
     for attempt in range(1, max_retries + 1):
-        print(f"\n---  Attempt {attempt} of {max_retries} ---")
+        print(f"\n--- Attempt {attempt} of {max_retries} ---")
 
         if attempt == 1:
-            # First attempt: send full code + error log
             user_content = build_prompt_python(title, description, source_code)
             user_content += f"\n\nPytest Error Log:\n{log_output}"
         else:
-            # Retry: send previous bad code + new error explicitly
-            # AI shouldn't have to guess what it wrote from history alone
             user_content = (
                 f"Your previous fix still failed the tests.\n\n"
                 f"The code you produced was:\n{fixed_code}\n\n"
@@ -219,87 +200,104 @@ def generate_and_test_fix(title, description, source_code,
                 f"approach, and return the full fixed file in JSON format."
             )
 
-        # Full conversation history sent every call — AI remembers all attempts
         conversation_history.append({"role": "user", "content": user_content})
 
-        print("Consulting AI (llama-3.3-70b-versatile)...")
+        print(f"Consulting AI ({MODEL})...")
         try:
             response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model=MODEL,
                 messages=conversation_history,
                 response_format={"type": "json_object"}
             )
+
+            # ── Capture and save token usage ──────────────────────────────
+            usage = response.usage
+            if usage:
+                save_token_entry(
+                    issue_id=issue_id,
+                    prompt_tokens=usage.prompt_tokens,
+                    completion_tokens=usage.completion_tokens,
+                    total_tokens=usage.total_tokens,
+                    model=MODEL
+                )
+                print(f"📊 Tokens — prompt: {usage.prompt_tokens}, "
+                      f"completion: {usage.completion_tokens}, "
+                      f"total: {usage.total_tokens}")
 
             raw_content = response.choices[0].message.content
             conversation_history.append({"role": "assistant", "content": raw_content})
 
             parsed      = json.loads(raw_content)
             explanation = parsed.get("explanation", "No explanation provided.")
-            fixed_code  = parsed.get("fixed_code", "")  # updates for next retry
+            fixed_code  = parsed.get("fixed_code", "")
 
-            print(f" AI Explanation: {explanation}")
+            print(f"✅ AI Explanation: {explanation}")
 
             if not fixed_code:
-                print(" AI returned empty code. Retrying...")
+                print("⚠️ AI returned empty code. Retrying...")
                 continue
 
         except json.JSONDecodeError:
-            print(" Failed to parse AI response as JSON. Retrying...")
+            print("⚠️ Failed to parse AI response as JSON. Retrying...")
             continue
         except Exception as e:
-            print(f" API error: {e}")
+            print(f"❌ API error: {e}")
             return False, source_code, str(e)
 
-        # Save versioned copy BEFORE testing — preserves all attempts for review
         save_version(fixed_code, attempt, output_dir, filename)
-
-        # Safely test: backup → swap → run pytest → restore original
         passed, log_output = run_tests_on_fixed_code(fixed_code)
 
         if passed:
-            print(f" Fix verified on attempt {attempt}!")
+            print(f"✅ Fix verified on attempt {attempt}!")
             return True, fixed_code, explanation
         else:
-            print(" Tests failed. Feeding error back to AI...")
+            print("⚠️ Tests failed. Feeding error back to AI...")
 
         time.sleep(1)
 
-    print(f"\n Could not fix after {max_retries} attempts. Check output/ for last attempt.")
+    print(f"\n❌ Could not fix after {max_retries} attempts.")
     return False, source_code, "Failed after max retries."
 
 
-# ── Block C2: Web Analysis Engine (V2 — new)
+# ── Block C2: Web Analysis Engine ──────────────────────────────────────────────
 
-def analyze_web_file(title, description, source_code, output_dir, filename):
-    """
-    V2 Core: Single-shot AI analysis for HTML/CSS/JS files.
-    No pytest loop — web files have no automated test runner.
-    AI returns bug fixes + UI/UX suggestions in one call.
-    Output is saved but marked as 'unverified' — human review needed.
-    Returns (success_bool, final_code, summary)
-    """
+def analyze_web_file(title, description, source_code, output_dir, filename, issue_id):
     try:
         client = get_client()
     except ValueError as e:
         print(e)
         return False, source_code, str(e)
 
+    MODEL    = "llama-3.3-70b-versatile"
     file_ext = Path(filename).suffix.lower()
 
-    print("Web file detected — running Web Analysis Engine...")
-    print(" Note: No automated tests available for web files. Output requires human review.")
+    print("🌐 Web file detected — running Web Analysis Engine...")
 
     prompt = build_prompt_web(title, description, source_code, file_ext)
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT_WEB},
                 {"role": "user",   "content": prompt}
             ],
             response_format={"type": "json_object"}
         )
+
+        # ── Capture and save token usage ──────────────────────────────────
+        usage = response.usage
+        if usage:
+            save_token_entry(
+                issue_id=issue_id,
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+                model=MODEL
+            )
+            print(f"📊 Tokens — prompt: {usage.prompt_tokens}, "
+                  f"completion: {usage.completion_tokens}, "
+                  f"total: {usage.total_tokens}")
 
         raw_content = response.choices[0].message.content
         parsed = json.loads(raw_content)
@@ -308,29 +306,26 @@ def analyze_web_file(title, description, source_code, output_dir, filename):
         ui_ux_suggestions = parsed.get("ui_ux_suggestions", "No UI/UX suggestions provided.")
         fixed_code        = parsed.get("fixed_code",        "")
 
-        print(f" Bug Analysis: {bug_explanation}")
-        print(f" UI/UX Suggestions: {ui_ux_suggestions}")
+        print(f"✅ Bug Analysis: {bug_explanation}")
+        print(f"✅ UI/UX Suggestions: {ui_ux_suggestions}")
 
         if not fixed_code:
-            print(" AI returned empty code.")
+            print("⚠️ AI returned empty code.")
             return False, source_code, "AI returned empty fixed_code."
 
-        # Save versioned copy to output/
         save_version(fixed_code, 1, output_dir, filename)
-
-        # Summary combines both findings for the log
         summary = f"BUGS: {bug_explanation} | UI/UX: {ui_ux_suggestions}"
         return True, fixed_code, summary
 
     except json.JSONDecodeError:
-        print(" Failed to parse AI response as JSON.")
+        print("⚠️ Failed to parse AI response as JSON.")
         return False, source_code, "JSON parse error."
     except Exception as e:
-        print(f"API error: {e}")
+        print(f"❌ API error: {e}")
         return False, source_code, str(e)
 
 
-# ── Block D: Grand Pipeline with Smart Router 
+# ── Block D: Grand Pipeline ────────────────────────────────────────────────────
 
 def process_issue(
     issue_id: str,
@@ -342,21 +337,12 @@ def process_issue(
     processed_dir: str = "processed",
     logs_dir: str      = "logs",
 ) -> dict:
-    """
-    Full pipeline — entry point for Sameer's dashboard to call.
-    Smart Router inside decides which engine to use based on file extension:
-      .py           → generate_and_test_fix() — V1 pytest loop
-      .html/.css/.js → analyze_web_file()     — V2 web analysis
-
-    Returns dict with 'status', 'output_file', 'file_type', and 'log'.
-    """
     for d in [input_dir, output_dir, processed_dir, logs_dir]:
         os.makedirs(d, exist_ok=True)
 
     input_path = Path(input_dir) / filename
     file_ext   = Path(filename).suffix.lower()
 
-    # ── STEP 1: Read source file 
     if not input_path.exists():
         log = write_log(logs_dir, issue_id, filename, title, 'FAILURE',
                         'Source file not found in input directory.')
@@ -369,12 +355,10 @@ def process_issue(
                         f'Failed to read source file: {e}')
         return {'status': 'error', 'log': log}
 
-    # ── STEP 2: Smart Router — decide which engine to use
-    print(f"\n Processing '{filename}' for issue: {title}")
+    print(f"\n📋 Processing '{filename}' for issue: {title}")
 
     if file_ext == '.py':
-        # ── V1: Python path — copy to CWD so pytest import works 
-        print(" Python file detected — running V1 Pytest Loop...")
+        print("🐍 Python file detected — running V1 Pytest Loop...")
         shutil.copy(str(input_path), filename)
 
         success, final_code, summary = generate_and_test_fix(
@@ -383,73 +367,55 @@ def process_issue(
             source_code=source_code,
             output_dir=output_dir,
             filename=filename,
+            issue_id=issue_id,
         )
 
-        # Clean up CWD copy regardless of outcome
         if os.path.exists(filename):
             os.remove(filename)
 
         file_type = 'python'
-        verified  = success  # pytest confirmed the fix
+        verified  = success
 
     elif file_ext in WEB_EXTENSIONS:
-        # ── V2: Web path — no pytest, AI analysis only 
         success, final_code, summary = analyze_web_file(
             title=title,
             description=description,
             source_code=source_code,
             output_dir=output_dir,
             filename=filename,
+            issue_id=issue_id,
         )
-
         file_type = 'web'
-        verified  = False  # web fixes are never auto-verified
+        verified  = False
 
     else:
-        # ── Unsupported file type
         log = write_log(logs_dir, issue_id, filename, title, 'FAILURE',
-                        f'Unsupported file type: {file_ext}. '
-                        f'Supported: .py, .html, .css, .js')
+                        f'Unsupported file type: {file_ext}.')
         return {'status': 'error', 'log': log}
 
     if not success:
         log = write_log(logs_dir, issue_id, filename, title, 'FAILURE', summary)
         return {'status': 'error', 'log': log}
 
-    # ── STEP 3: Save verified/suggested fix to output
     output_filename = f'fixed_{issue_id}_{filename}'
     output_path = Path(output_dir) / output_filename
     try:
         output_path.write_text(final_code, encoding='utf-8')
-        status_label = " Verified" if verified else " Unverified (human review needed)"
+        status_label = "✅ Verified" if verified else "⚠️ Unverified (human review needed)"
         print(f"{status_label} fix saved to {output_path}")
     except Exception as e:
         log = write_log(logs_dir, issue_id, filename, title, 'FAILURE',
                         f'Failed to write output file: {e}')
         return {'status': 'error', 'log': log}
 
-    # ── STEP 4: Move original to processed
     try:
-        # Save old version in processed/
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
         processed_filename = f"{timestamp}_{filename}"
-
-        shutil.copy(
-            str(input_path),
-            str(Path(processed_dir) / processed_filename)
-        )
-        print(f"Original archived to processed/{filename}")
-
-        # Update input file with AI-fixed code
+        shutil.copy(str(input_path), str(Path(processed_dir) / processed_filename))
         input_path.write_text(final_code, encoding='utf-8')
-        print(f"Input file updated with latest AI fix.")
-
     except Exception as e:
-        logging.getLogger('merged_agent').warning(
-            f'Could not update files: {e}'
-        )
-    # ── STEP 5: Write success log 
+        logging.getLogger('merged_agent').warning(f'Could not update files: {e}')
+
     verified_str = "AUTO-VERIFIED by pytest" if verified else "UNVERIFIED — human review required"
     log = write_log(
         logs_dir, issue_id, filename, title, 'SUCCESS',
@@ -465,38 +431,19 @@ def process_issue(
     }
 
 
-# ── Entry Point 
-
 if __name__ == "__main__":
     import sys
-
-    # Usage: python ai-engine.py <issue_id> <filename> <title> <description>
-    # Example: python ai-engine.py ISS-001 calculator.py "Zero division bug" "Crashes when rate is 0"
-    
     if len(sys.argv) < 5:
         print("Usage: python ai-engine.py <issue_id> <filename> <title> <description>")
-        print("Example: python ai-engine.py ISS-001 calculator.py \"Zero division bug\" \"Crashes when rate is 0\"")
         sys.exit(1)
-
     issue_id    = sys.argv[1]
     filename    = sys.argv[2]
     title       = sys.argv[3]
     description = sys.argv[4]
-
-    # File must already be in input/ folder before running
     if not os.path.exists(f"input/{filename}"):
-        print(f" 'input/{filename}' not found.")
-        print(f"   Place the file in the input/ folder first.")
+        print(f"❌ 'input/{filename}' not found.")
         sys.exit(1)
-
-    result = process_issue(
-        issue_id=issue_id,
-        filename=filename,
-        title=title,
-        description=description,
-    )
-
-    print(f"\n Result: {result['status']}")
-    if result.get('verified') is not None:
-        print(f" Verified: {result['verified']}")
+    result = process_issue(issue_id=issue_id, filename=filename,
+                           title=title, description=description)
+    print(f"\n✅ Result: {result['status']}")
     print(result['log'])
