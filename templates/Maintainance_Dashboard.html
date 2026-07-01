@@ -112,6 +112,14 @@ textarea { resize: vertical; }
     padding: 9px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
 }
 .export-btn:hover { background: #059669; }
+.scan-btn {
+    background: #7c3aed; color: white; border: none;
+    padding: 9px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+}
+.scan-btn:hover { background: #6d28d9; }
+.scan-btn:disabled { background: #a78bfa; cursor: not-allowed; }
+.status-detected { background: #0891b2; }
 .restore-btn {
     background: #dc2626; color: white; border: none; padding: 9px 14px;
     border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
@@ -576,6 +584,9 @@ tr:hover td { background: #f0f9ff; }
     <div class="card rejected-card">
         <h2 id="rejectedIssues">0</h2><p>Rejected</p>
     </div>
+    <div class="card" style="border-left:5px solid #0891b2">
+        <h2 id="detectedIssues">0</h2><p>AI Detected</p>
+    </div>
 </div>
 
 <!-- Token side tab button (fixed to right edge) -->
@@ -706,6 +717,7 @@ tr:hover td { background: #f0f9ff; }
     <h2>Issues List</h2>
     <div class="header-actions">
         <input type="text" id="searchIssue" placeholder="🔍 Search by title" onkeyup="searchIssue()">
+        <button class="scan-btn" id="scanBtn" onclick="scanBugs()">🔍 Scan Bugs</button>
         <button class="export-btn" onclick="exportJSON()">📥 Export JSON</button>
         <button class="restore-btn" onclick="restoreOriginal()"
             data-tooltip="Undoes ALL approved changes and resets the file back to its very first version.">
@@ -1000,12 +1012,14 @@ function renderIssues() {
     const review   = issues.filter(i => i.status === "In Review").length;
     const resolved = issues.filter(i => i.status === "Resolved").length;
     const rejected = issues.filter(i => i.status === "Rejected").length;
+    const detected = issues.filter(i => i.status === "AI Detected").length;
 
     document.getElementById("totalIssues").innerText    = total;
     document.getElementById("openIssues").innerText     = open;
     document.getElementById("reviewIssues").innerText   = review;
     document.getElementById("resolvedIssues").innerText = resolved;
     document.getElementById("rejectedIssues").innerText = rejected;
+    document.getElementById("detectedIssues").innerText = detected;
 
     issues.forEach(issue => {
         const row = tbody.insertRow();
@@ -1055,7 +1069,10 @@ function renderIssues() {
 function buildActions(issue) {
     let html = "";
 
-    if (issue.status === "In Review") {
+    if (issue.status === "AI Detected") {
+        html += `<div class="review-note" style="background:#e0f2fe;border-color:#7dd3fc;color:#0369a1">🤖 Auto-detected bug</div>`;
+        html += `<button class="action-btn approve-btn" onclick="sendToAI('${issue.id}')">🚀 Send to AI</button><br>`;
+    } else if (issue.status === "In Review") {
         html += `<div class="review-note">⏳ Review the AI's fix below</div>`;
         html += `<button class="action-btn preview-btn" onclick="openPreview('${issue.id}')">👁 Live Preview</button><br>`;
         html += `<button class="action-btn diff-btn"    onclick="openDiff('${issue.id}')">🔍 View Diff</button><br>`;
@@ -1065,7 +1082,7 @@ function buildActions(issue) {
         html += `<button class="action-btn download-btn" onclick="downloadFix('${issue.id}')">⬇ Download</button><br>`;
     } else if (issue.status === "Rejected") {
         html += `<button class="action-btn resubmit-btn"
-            onclick="resubmitIssue('${issue.title.replace(/'/g,"\\'")}','${issue.description.replace(/'/g,"\\'")}')">
+            onclick="resubmitIssue('${issue.title.replace(/'/g,"\'")}','${issue.description.replace(/'/g,"\'")}')">
             ✏️ Resubmit</button><br>`;
     }
 
@@ -1077,7 +1094,8 @@ function statusBadge(status) {
     const map = {
         "Open":"status-open","In Progress":"status-progress","In Test":"status-test",
         "In Review":"status-review","Resolved":"status-resolved",
-        "Rejected":"status-rejected","AI Failed":"status-failed"
+        "Rejected":"status-rejected","AI Failed":"status-failed",
+        "AI Detected":"status-detected"
     };
     return `<span class="status ${map[status]||'status-open'}">${status}</span>`;
 }
@@ -1574,6 +1592,68 @@ function charDiff(oldLine, newLine) {
     }
     return [buildHtml(seqA,"char-del",""), buildHtml(seqB,"","char-add")];
 }
+
+/* ══════════════════════════════════════
+   SCAN BUGS
+   ══════════════════════════════════════ */
+function scanBugs() {
+    const btn = document.getElementById("scanBtn");
+    btn.disabled  = true;
+    btn.textContent = "🔍 Scanning…";
+
+    fetch("/scan_bugs")
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = "🔍 Scan Bugs";
+            if (data.bugs_found > 0) {
+                showBanner("success",
+                    `🔍 Scan complete — ${data.bugs_found} new bug(s) detected`,
+                    "Check the issues list below. Click 🚀 Send to AI to fix each one.");
+            } else {
+                showBanner("success",
+                    "✅ Scan complete — no new bugs found",
+                    "The AI detector found no issues that weren't already tracked.");
+            }
+            loadIssues();
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.textContent = "🔍 Scan Bugs";
+            showBanner("error", "❌ Scan failed", "Could not reach the server.");
+            console.error(err);
+        });
+}
+
+/* ══════════════════════════════════════
+   SEND AI DETECTED ISSUE TO AI FOR FIX
+   ══════════════════════════════════════ */
+function sendToAI(id) {
+    if (!confirm("Send this detected bug to the AI for fixing?")) return;
+
+    // Find the row's action buttons and disable them
+    const allBtns = document.querySelectorAll(`[onclick*="${id}"]`);
+    allBtns.forEach(b => b.disabled = true);
+
+    fetch(`/approve_issue/${id}`, { method: "POST" })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                alert("Error: " + data.error);
+                allBtns.forEach(b => b.disabled = false);
+            } else {
+                showBanner("success",
+                    "🤖 AI is fixing the bug",
+                    "The issue is now In Progress → In Review when done.");
+                loadIssues();
+            }
+        })
+        .catch(err => {
+            alert("Network error."); console.error(err);
+            allBtns.forEach(b => b.disabled = false);
+        });
+}
+
 </script>
 </body>
 </html>

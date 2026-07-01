@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from ai.ai_engine2 import process_issue
+from ai.bug_detector import detect_bugs
 import json
 import uuid
 from datetime import datetime
@@ -209,12 +210,13 @@ def submit_issue():
     issue_id = str(uuid.uuid4())[:8]
 
     issue = {
-        "id":              issue_id,
-        "title":           data["title"],
-        "description":     data["description"],
-        "status":          "Open",
-        "createdOn":       datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-        "ai_remark":       None,
+        "id":               issue_id,
+        "title":            data["title"],
+        "description":      data["description"],
+        "status":           "Open",
+        "source":           "Manual",
+        "createdOn":        datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+        "ai_remark":        None,
         "rejection_reason": None,
     }
 
@@ -310,6 +312,45 @@ def restore_original():
     working_path  = os.path.join(TEMPLATES_DIR, WORKING_FILE)
     shutil.copy(original_path, working_path)
     return jsonify({"message": "Restored to the original version. All approved changes have been undone."})
+
+
+@app.route("/scan_bugs")
+def scan_bugs():
+    """
+    Runs the AI bug detector on the live HTML file.
+    Detected bugs are added to issues.json (duplicates skipped by title).
+    """
+    issues = load_json(ISSUES_FILE)
+    bugs   = detect_bugs()
+
+    existing_titles = {issue["title"] for issue in issues}
+    added = 0
+
+    for bug in bugs:
+        if bug["title"] not in existing_titles:
+            issues.append(bug)
+            added += 1
+
+    save_json(ISSUES_FILE, issues)
+    return jsonify({"message": "Scan completed", "bugs_found": added})
+
+
+@app.route("/resolve_issue/<issue_id>", methods=["POST"])
+def resolve_issue(issue_id):
+    """Manually marks an issue as Resolved."""
+    issues = load_json(ISSUES_FILE)
+    for issue in issues:
+        if str(issue["id"]) == str(issue_id):
+            issue["status"] = "Resolved"
+    save_json(ISSUES_FILE, issues)
+    return jsonify({"message": "Issue marked as Resolved"})
+
+
+@app.route("/accept_issue/<issue_id>", methods=["POST"])
+def accept_issue(issue_id):
+    """Resets a rejected/detected issue back to Open so it can be resubmitted."""
+    update_issue_status(issue_id, "Open")
+    return jsonify({"message": "Issue reset to Open"})
 
 
 @app.route("/get_issues")
