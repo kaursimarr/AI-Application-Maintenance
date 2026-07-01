@@ -1,4 +1,4 @@
-# 🤖 AI Application Maintenance System
+but rightnow this is connecting to older maintainancedashboard i need to connect this with new# 🤖 AI Application Maintenance System
 
 An intelligent web application maintenance tool that lets users raise design or bug tickets, automatically generates AI-powered fixes, and gives the customer full control to **review**, **preview**, **diff**, **approve**, or **reject** every change before it goes live.
 
@@ -15,13 +15,14 @@ An intelligent web application maintenance tool that lets users raise design or 
 - [Issue Lifecycle](#issue-lifecycle)
 - [API Routes](#api-routes)
 - [Token Tracking](#token-tracking)
+- [Bug Scanner](#bug-scanner)
 - [Tech Stack](#tech-stack)
 
 ---
 
 ## Overview
 
-This system wraps the **Home Loan EMI Calculator** with an AI-powered maintenance dashboard. When a user notices a design problem (e.g. wrong button colour, bad layout), they raise a ticket. The AI engine analyses the HTML file, applies the fix, and puts the result up for human review. The customer can preview the fix live in an iframe, compare it line-by-line against the original using a built-in diff viewer, then accept or reject it with an optional rejection reason.
+This system wraps the **Home Loan EMI Calculator** with an AI-powered maintenance dashboard. Issues can be raised in two ways — manually by a user describing a problem, or automatically by the built-in **bug scanner** which analyses the live HTML file and creates tickets for any issues it finds. The AI engine then fixes each ticket and puts the result up for human review. The customer can preview the fix live in an iframe, compare it line-by-line against the original using a built-in diff viewer, then accept or reject it with an optional rejection reason.
 
 ---
 
@@ -32,6 +33,13 @@ This system wraps the **Home Loan EMI Calculator** with an AI-powered maintenanc
 - Real-time status tracking — Open → In Progress → In Review → Resolved / Rejected
 - Search, export (JSON), and delete issues from the dashboard
 - Resubmit rejected issues with pre-filled form
+
+### 🔍 Automatic Bug Scanning
+- **Scan Bugs** button on the dashboard triggers `/scan_bugs`
+- `ai/bug_detector.py` analyses the live `emi_calculator.html` for issues automatically
+- Detected bugs are added to `issues.json` with `"source": "Auto"` so you can tell them apart from manually raised tickets
+- Duplicate detection — if a bug with the same title already exists, it won't be added again
+- Scanned issues go through the same review workflow as manual ones
 
 ### 🤖 AI Engine
 - Powered by **Groq API** using `llama-3.3-70b-versatile`
@@ -70,6 +78,7 @@ AI-Application-Maintenance/
 │
 ├── ai/
 │   ├── ai_engine2.py               # AI engine — web + Python fix pipelines
+│   ├── bug_detector.py             # Auto bug scanner — analyses HTML for issues
 │   └── groq_client.py              # Groq API client initialisation
 │
 ├── templates/
@@ -145,6 +154,30 @@ http://127.0.0.1:5000/dashboard  → Maintenance Dashboard
 
 ## How It Works
 
+Two ways to create issues:
+
+**Manual** — user types a title and description and clicks Submit.
+
+**Auto Scan** — user clicks Scan Bugs on the dashboard:
+
+```
+Dashboard → Scan Bugs button
+       ↓
+GET /scan_bugs
+       ↓
+bug_detector.py reads live emi_calculator.html
+       ↓
+Returns list of detected bugs
+       ↓
+Each bug added to issues.json (source: "Auto")
+       ↓
+Duplicates skipped automatically
+       ↓
+Issues appear in dashboard ready for AI fix
+```
+
+**Then for each issue (manual or auto):**
+
 ```
 User submits ticket
        ↓
@@ -173,6 +206,9 @@ Customer opens dashboard
                       → status: Rejected
 ```
 
+> Issues created by the bug scanner have `"source": "Auto"` in `issues.json`.
+> Manually submitted issues have `"source": "Manual"`.
+
 ---
 
 ## Issue Lifecycle
@@ -185,6 +221,8 @@ Customer opens dashboard
 | `Resolved` | Customer approved — fix is now live |
 | `Rejected` | Customer rejected — original file unchanged |
 | `AI Failed` | Groq API error or empty response |
+
+> **Issue Sources:** `Manual` — raised by the user via the form. `Auto` — detected by the bug scanner.
 
 ---
 
@@ -203,6 +241,9 @@ Customer opens dashboard
 | `GET` | `/download/<id>` | Downloads fixed file as attachment |
 | `POST` | `/restore_original` | Restores the very first original file |
 | `DELETE` | `/delete_issue/<id>` | Deletes an issue record |
+| `GET` | `/scan_bugs` | Runs bug detector and adds found issues to issues.json |
+| `POST` | `/resolve_issue/<id>` | Manually marks an issue as Resolved |
+| `POST` | `/accept_issue/<id>` | Resets a rejected issue back to Open |
 | `GET` | `/token_stats` | Returns token usage statistics |
 | `POST` | `/estimate_tokens` | Returns token estimate for a given description |
 
@@ -227,6 +268,31 @@ The dashboard drawer reads this file and shows:
 - Daily usage vs the 500,000 token free tier limit
 - All-time totals broken down by input and output
 - Live estimate for the next submission based on current file size + description length
+
+---
+
+## Bug Scanner
+
+The bug scanner (`ai/bug_detector.py`) automatically inspects the live `emi_calculator.html` file and returns a list of detected issues. Each detected bug is formatted as an issue object:
+
+```json
+{
+  "id": "auto-001",
+  "title": "Missing input validation",
+  "description": "The loan amount field accepts negative numbers.",
+  "status": "Open",
+  "source": "Auto",
+  "createdOn": "29-06-2026 14:00:00"
+}
+```
+
+Calling `GET /scan_bugs` from the dashboard button will:
+1. Run the detector against the current live file
+2. Add any new bugs to `data/issues.json`
+3. Skip any bug whose title already exists (no duplicates)
+4. Return a count of how many new bugs were added
+
+These auto-detected issues then follow the exact same workflow as manual tickets — AI fixes them, customer reviews, approves or rejects.
 
 ---
 
